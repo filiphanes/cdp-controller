@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Taby</title>
+	<style type="text/css">
+    html {
+      background: #222;
+      color: white;
+    }
+    img {
+      max-width: 24px;
+      max-height: 24px;
+      vertical-align: middle;
+    }
+    button {
+      margin: 0 .2rem;
+      padding: .3rem .5rem;
+      vertical-align: middle;
+      display: inline-block;
+    }
+	</style>
+</head>
+<body>
+	<form onsubmit="event.preventDefault();createTab()">
+		<input type="text" id="newurl" name="newurl" size="50">
+		<input type="submit" value="Create new tab">
+	</form>
+	<br>
+  <ol id="tabs"></ol>
+	<script type="text/javascript">
+		function createTab() {
+			var url = document.getElementById("newurl").value.trim();
+			if (url === "") return;
+      if (!url.match(/^https?:\//)) url = 'https://' + url
+			fetch('/json/new?' + url, {
+				method: 'POST'
+			}).then(function(response) {
+        setTimeout(loadPages, 1000);
+			}).catch(console.log);
+		}
+		
+		function activateTab(id) {
+			fetch('/json/activate/' + id, {
+				method: 'POST'
+			}).then(function(response) {
+        loadPages();
+			}).catch(console.log);
+		}
+		
+		function closeTab(id) {
+			fetch('/json/close/' + id, {
+				method: 'POST'
+			}).then(function(response) {
+        loadPages();
+			}).catch(console.log);
+		}
+		
+		function loadPages() {
+			fetch('/json').then(function(response) {
+				if (response.ok) {
+					response.json().then(function(pages) {
+						var tabs = document.getElementById("tabs");
+						while (tabs.firstChild) {
+							tabs.removeChild(tabs.firstChild);
+						}
+            pages.forEach(function(page) {
+              if (page.type != "page") return;
+							var li = document.createElement("li");
+							var activateButton = document.createElement("button");
+							activateButton.innerText = "Activate";
+							activateButton.addEventListener("click", function() {activateTab(page.id)})
+							li.appendChild(activateButton);
+							var closeButton = document.createElement("button");
+							closeButton.innerText = "Close";
+							closeButton.addEventListener("click", function() {closeTab(page.id)})
+							li.appendChild(closeButton);
+              if (page.faviconUrl) {
+                var img = document.createElement("img");
+                img.src = page.faviconUrl;
+                li.appendChild(img);
+              }
+							var title = document.createElement("span");
+							title.innerText = ' ' + page.title;
+							li.appendChild(title);
+							tabs.appendChild(li);
+						})
+					}).catch(console.log);
+				}
+			}).catch(console.log)
+    }
+		
+		loadPages();
+	</script>
+</body>
+</html>
